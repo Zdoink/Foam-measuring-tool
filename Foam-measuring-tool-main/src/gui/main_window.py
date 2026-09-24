@@ -1,5 +1,7 @@
 import sys
 
+import cv2
+
 from PySide6.QtGui import QPixmap
 from PySide6.QtCore import Qt
 
@@ -193,24 +195,92 @@ class MainWindow(QWidget):
 
     def open_image(self):
 
-    filename, _ = QFileDialog.getOpenFileName(
-        self,
-        "Select Image",
-        "",
-        "Images (*.png *.jpg *.jpeg *.bmp *.tif *.tiff)"
-    )
+        filename, _ = QFileDialog.getOpenFileName(
+            self,
+            "Select Image",
+            "",
+            "Images (*.png *.jpg *.jpeg *.bmp *.tif *.tiff)"
+        )
 
-    if filename:
+        if not filename:
+            return
 
         self.image_path = filename
 
-        pixmap = QPixmap(filename)
+        #
+        # Load original image with OpenCV
+        #
 
-        pixmap = pixmap.scaled(
-            self.image_viewer.width(),
-            self.image_viewer.height(),
-            Qt.KeepAspectRatio,
-            Qt.SmoothTransformation
+        image = cv2.imread(filename)
+
+        if image is None:
+
+            self.footer.setText(
+                "Failed to load image."
+            )
+
+            return
+
+        #
+        # Get dimensions
+        #
+
+        height, width = image.shape[:2]
+
+        #
+        # Create UI preview
+        #
+
+        max_dimension = 1000
+
+        scale = min(
+            max_dimension / width,
+            max_dimension / height
+        )
+
+        scale = min(scale, 1.0)
+
+        preview = cv2.resize(
+            image,
+            None,
+            fx=scale,
+            fy=scale
+        )
+
+        #
+        # OpenCV uses BGR
+        # Qt uses RGB
+        #
+
+        preview = cv2.cvtColor(
+            preview,
+            cv2.COLOR_BGR2RGB
+        )
+
+        #
+        # Convert to QImage
+        #
+
+        from PySide6.QtGui import QImage
+
+        h, w, ch = preview.shape
+
+        bytes_per_line = ch * w
+
+        qimage = QImage(
+            preview.data,
+            w,
+            h,
+            bytes_per_line,
+            QImage.Format_RGB888
+        )
+
+        #
+        # Display
+        #
+
+        pixmap = QPixmap.fromImage(
+            qimage
         )
 
         self.image_viewer.setPixmap(
@@ -218,7 +288,7 @@ class MainWindow(QWidget):
         )
 
         self.footer.setText(
-            f"Loaded: {filename}"
+            f"Loaded: {width} x {height}"
         )
 
 
