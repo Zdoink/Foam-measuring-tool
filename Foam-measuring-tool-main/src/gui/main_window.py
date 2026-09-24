@@ -2,18 +2,17 @@ import sys
 
 import cv2
 
-from PySide6.QtGui import QPixmap
 from PySide6.QtCore import Qt
-
+from PySide6.QtGui import QImage, QPixmap
 from PySide6.QtWidgets import (
     QApplication,
-    QWidget,
-    QPushButton,
-    QLabel,
     QFileDialog,
-    QVBoxLayout,
+    QFrame,
     QHBoxLayout,
-    QFrame
+    QLabel,
+    QPushButton,
+    QVBoxLayout,
+    QWidget,
 )
 
 
@@ -24,6 +23,7 @@ class MainWindow(QWidget):
         super().__init__()
 
         self.image_path = None
+        self.original_image = None
 
         self.setWindowTitle(
             "Foam Measure Pro"
@@ -40,10 +40,7 @@ class MainWindow(QWidget):
 
         main_layout = QVBoxLayout()
 
-        #
         # TOOLBAR
-        #
-
         toolbar = QHBoxLayout()
 
         self.open_button = QPushButton(
@@ -62,136 +59,53 @@ class MainWindow(QWidget):
             "Export"
         )
 
-        toolbar.addWidget(
-            self.open_button
-        )
-
-        toolbar.addWidget(
-            self.calibrate_button
-        )
-
-        toolbar.addWidget(
-            self.detect_button
-        )
-
-        toolbar.addWidget(
-            self.export_button
-        )
-
+        toolbar.addWidget(self.open_button)
+        toolbar.addWidget(self.calibrate_button)
+        toolbar.addWidget(self.detect_button)
+        toolbar.addWidget(self.export_button)
         toolbar.addStretch()
 
-        #
         # CONTENT AREA
-        #
-
         content = QHBoxLayout()
 
-        #
-        # IMAGE VIEWER
-        #
-
+        # QLabel is used as the image viewer. This keeps the application
+        # self-contained and avoids importing a missing ImageViewer module.
         self.image_viewer = QLabel()
+        self.image_viewer.setAlignment(Qt.AlignCenter)
+        self.image_viewer.setFrameShape(QFrame.Box)
+        self.image_viewer.setMinimumSize(800, 600)
+        self.image_viewer.setText("Open an image to begin")
 
-        self.image_viewer.setAlignment(
-            Qt.AlignCenter
-        )
-
-        self.image_viewer.setFrameShape(
-            QFrame.Box
-        )
-
-        self.image_viewer.setMinimumSize(
-            650,
-            500
-        )
-
-        #
         # RESULTS PANEL
-        #
-
         results_panel = QVBoxLayout()
 
-        self.cells_label = QLabel(
-            "Cells: --"
-        )
+        self.cells_label = QLabel("Cells: --")
+        self.diameter_label = QLabel("Mean Diameter: --")
+        self.scale_label = QLabel("Scale: Not Set")
+        self.status_label = QLabel("Ready")
 
-        self.diameter_label = QLabel(
-            "Mean Diameter: --"
-        )
-
-        self.scale_label = QLabel(
-            "Scale: Not Set"
-        )
-
-        self.status_label = QLabel(
-            "Ready"
-        )
-
-        results_panel.addWidget(
-            QLabel("Measurements")
-        )
-
-        results_panel.addWidget(
-            self.cells_label
-        )
-
-        results_panel.addWidget(
-            self.diameter_label
-        )
-
-        results_panel.addWidget(
-            self.scale_label
-        )
-
-        results_panel.addWidget(
-            self.status_label
-        )
-
+        results_panel.addWidget(QLabel("Measurements"))
+        results_panel.addWidget(self.cells_label)
+        results_panel.addWidget(self.diameter_label)
+        results_panel.addWidget(self.scale_label)
+        results_panel.addWidget(self.status_label)
         results_panel.addStretch()
 
-        content.addWidget(
-            self.image_viewer
-        )
+        content.addWidget(self.image_viewer)
+        content.addLayout(results_panel)
 
-        content.addLayout(
-            results_panel
-        )
-
-        #
         # FOOTER
-        #
+        self.footer = QLabel("Status: Ready")
 
-        self.footer = QLabel(
-            "Status: Ready"
-        )
-
-        #
         # CONNECTIONS
-        #
+        self.open_button.clicked.connect(self.open_image)
 
-        self.open_button.clicked.connect(
-            self.open_image
-        )
-
-        #
         # BUILD WINDOW
-        #
+        main_layout.addLayout(toolbar)
+        main_layout.addLayout(content)
+        main_layout.addWidget(self.footer)
 
-        main_layout.addLayout(
-            toolbar
-        )
-
-        main_layout.addLayout(
-            content
-        )
-
-        main_layout.addWidget(
-            self.footer
-        )
-
-        self.setLayout(
-            main_layout
-        )
+        self.setLayout(main_layout)
 
     def open_image(self):
 
@@ -205,88 +119,58 @@ class MainWindow(QWidget):
         if not filename:
             return
 
-        self.image_path = filename
-
-        #
-        # Load original image with OpenCV
-        #
-
+        # Load the original image with OpenCV.
         image = cv2.imread(filename)
 
         if image is None:
-
-            self.footer.setText(
-                "Failed to load image."
-            )
-
+            self.footer.setText("Failed to load image.")
             return
 
-        #
-        # Get dimensions
-        #
+        self.image_path = filename
+        self.original_image = image
 
+        # Get original dimensions.
         height, width = image.shape[:2]
 
-        #
-        # Create UI preview
-        #
-
+        # Create a preview no larger than 1000 pixels in either dimension.
         max_dimension = 1000
-
         scale = min(
             max_dimension / width,
             max_dimension / height
         )
-
         scale = min(scale, 1.0)
 
-        preview = cv2.resize(
-            image,
-            None,
-            fx=scale,
-            fy=scale
-        )
+        if scale < 1.0:
+            preview = cv2.resize(
+                image,
+                None,
+                fx=scale,
+                fy=scale,
+                interpolation=cv2.INTER_AREA
+            )
+        else:
+            preview = image.copy()
 
-        #
-        # OpenCV uses BGR
-        # Qt uses RGB
-        #
-
+        # OpenCV uses BGR; Qt expects RGB.
         preview = cv2.cvtColor(
             preview,
             cv2.COLOR_BGR2RGB
         )
 
-        #
-        # Convert to QImage
-        #
-
-        from PySide6.QtGui import QImage
-
-        h, w, ch = preview.shape
-
-        bytes_per_line = ch * w
+        # Convert the preview to a QImage. copy() makes the QImage independent
+        # of the temporary NumPy buffer after this method returns.
+        preview_height, preview_width, channels = preview.shape
+        bytes_per_line = channels * preview_width
 
         qimage = QImage(
             preview.data,
-            w,
-            h,
+            preview_width,
+            preview_height,
             bytes_per_line,
             QImage.Format_RGB888
-        )
+        ).copy()
 
-        #
-        # Display
-        #
-
-        pixmap = QPixmap.fromImage(
-            qimage
-        )
-
-        self.image_viewer.setPixmap(
-            pixmap
-        )
-
+        self.image_viewer.setPixmap(QPixmap.fromImage(qimage))
         self.footer.setText(
             f"Loaded: {width} x {height}"
         )
@@ -294,14 +178,11 @@ class MainWindow(QWidget):
 
 def start_app():
 
-    app = QApplication(
-        sys.argv
-    )
-
+    app = QApplication(sys.argv)
     window = MainWindow()
-
     window.show()
+    sys.exit(app.exec())
 
-    sys.exit(
-        app.exec()
-    )
+
+if __name__ == "__main__":
+    start_app()
