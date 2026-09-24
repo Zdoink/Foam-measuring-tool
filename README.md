@@ -124,8 +124,8 @@ python main.py
 ### Phase 1
 
 - [x] Project structure
-- [ ] GUI window
-- [ ] Image loading
+- [X] GUI window
+- [X] Image loading
 - [ ] Manual calibration
 - [ ] Basic segmentation
 
