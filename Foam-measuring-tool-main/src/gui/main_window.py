@@ -13,7 +13,8 @@ from PySide6.QtWidgets import (
     QFileDialog,
     QVBoxLayout,
     QHBoxLayout,
-    QFrame
+    QFrame,
+    QLabel
 )
 
 from .image_viewer import ImageViewer
