@@ -88,8 +88,10 @@ class MainWindow(QWidget):
         # IMAGE VIEWER
         #
 
-        self.image_viewer = QLabel(
-            "Open a microscope image"
+        self.image_viewer = QLabel()
+
+        self.image_viewer.setAlignment(
+            Qt.AlignCenter
         )
 
         self.image_viewer.setFrameShape(
