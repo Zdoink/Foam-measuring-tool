@@ -191,24 +191,33 @@ class MainWindow(QWidget):
 
     def open_image(self):
 
-        filename, _ = QFileDialog.getOpenFileName(
-            self,
-            "Select Image",
-            "",
-            "Images (*.png *.jpg *.jpeg *.bmp *.tif *.tiff)"
+    filename, _ = QFileDialog.getOpenFileName(
+        self,
+        "Select Image",
+        "",
+        "Images (*.png *.jpg *.jpeg *.bmp *.tif *.tiff)"
+    )
+
+    if filename:
+
+        self.image_path = filename
+
+        pixmap = QPixmap(filename)
+
+        pixmap = pixmap.scaled(
+            self.image_viewer.width(),
+            self.image_viewer.height(),
+            Qt.KeepAspectRatio,
+            Qt.SmoothTransformation
         )
 
-        if filename:
+        self.image_viewer.setPixmap(
+            pixmap
+        )
 
-            self.image_path = filename
-
-            self.image_viewer.setText(
-                filename
-            )
-
-            self.footer.setText(
-                f"Loaded: {filename}"
-            )
+        self.footer.setText(
+            f"Loaded: {filename}"
+        )
 
 
 def start_app():
