@@ -1,22 +1,15 @@
 import sys
-import cv2
-
-from PySide6.QtGui import QPixmap
-from PySide6.QtCore import Qt
-
 
 from PySide6.QtWidgets import (
     QApplication,
     QWidget,
     QPushButton,
+    QLabel,
     QFileDialog,
     QVBoxLayout,
     QHBoxLayout,
-    QFrame,
-    QLabel
+    QFrame
 )
-
-from .image_viewer import ImageViewer
 
 
 class MainWindow(QWidget):
@@ -92,11 +85,17 @@ class MainWindow(QWidget):
         # IMAGE VIEWER
         #
 
-        self.image_viewer = ImageViewer()
+        self.image_viewer = QLabel(
+            "Open a microscope image"
+        )
+
+        self.image_viewer.setFrameShape(
+            QFrame.Box
+        )
 
         self.image_viewer.setMinimumSize(
-            800,
-            600
+            650,
+            500
         )
 
         #
@@ -196,95 +195,17 @@ class MainWindow(QWidget):
             "Images (*.png *.jpg *.jpeg *.bmp *.tif *.tiff)"
         )
 
-        if not filename:
-            return
+        if filename:
 
-        self.image_path = filename
+            self.image_path = filename
 
-        #
-        # Load original image with OpenCV
-        #
-
-        image = cv2.imread(filename)
-        self.original_image = image
-
-        if image is None:
-
-            self.footer.setText(
-                "Failed to load image."
+            self.image_viewer.setText(
+                filename
             )
 
-            return
-
-        #
-        # Get dimensions
-        #
-
-        height, width = image.shape[:2]
-
-        #
-        # Create UI preview
-        #
-
-        max_dimension = 1000
-
-        scale = min(
-            max_dimension / width,
-            max_dimension / height
-        )
-
-        scale = min(scale, 1.0)
-
-        preview = cv2.resize(
-            image,
-            None,
-            fx=scale,
-            fy=scale
-        )
-
-        #
-        # OpenCV uses BGR
-        # Qt uses RGB
-        #
-
-        preview = cv2.cvtColor(
-            preview,
-            cv2.COLOR_BGR2RGB
-        )
-
-        #
-        # Convert to QImage
-        #
-
-        from PySide6.QtGui import QImage
-
-        h, w, ch = preview.shape
-
-        bytes_per_line = ch * w
-
-        qimage = QImage(
-            preview.data,
-            w,
-            h,
-            bytes_per_line,
-            QImage.Format_RGB888
-        )
-
-        #
-        # Display
-        #
-
-        pixmap = QPixmap.fromImage(
-            qimage
-        )
-
-        self.image_viewer.load_image(
-            filename
-        )
-
-        self.footer.setText(
-            f"Loaded: {width} x {height}"
-        )
+            self.footer.setText(
+                f"Loaded: {filename}"
+            )
 
 
 def start_app():
@@ -300,6 +221,3 @@ def start_app():
     sys.exit(
         app.exec()
     )
-
-if __name__ == "__main__":
-    start_app()
