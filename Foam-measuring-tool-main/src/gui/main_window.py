@@ -17,6 +17,7 @@ from PySide6.QtWidgets import (
 )
 
 from .image_viewer import ImageViewer
+from ..plugins import binary_image
 
 
 class MainWindow(QWidget):
@@ -26,6 +27,7 @@ class MainWindow(QWidget):
         super().__init__()
 
         self.image_path = None
+        self.original_image = None
 
         self.setWindowTitle(
             "Foam Measure Pro"
@@ -64,6 +66,10 @@ class MainWindow(QWidget):
             "Export"
         )
 
+        self.binary_button = QPushButton(
+            "Binary / Circle Crop"
+        )
+
         toolbar.addWidget(
             self.open_button
         )
@@ -78,6 +84,10 @@ class MainWindow(QWidget):
 
         toolbar.addWidget(
             self.export_button
+        )
+
+        toolbar.addWidget(
+            self.binary_button
         )
 
         toolbar.addStretch()
@@ -165,6 +175,10 @@ class MainWindow(QWidget):
 
         self.open_button.clicked.connect(
             self.open_image
+        )
+
+        self.binary_button.clicked.connect(
+            self.open_binary_tool
         )
 
         #
@@ -284,6 +298,21 @@ class MainWindow(QWidget):
 
         self.footer.setText(
             f"Loaded: {width} x {height}"
+        )
+
+    def open_binary_tool(self):
+
+        if self.original_image is None:
+
+            self.footer.setText(
+                "Open an image first."
+            )
+
+            return
+
+        binary_image.open_dialog(
+            self.original_image,
+            self
         )
 
 
