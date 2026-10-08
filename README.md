@@ -8,6 +8,8 @@ You load a microscope picture of foam, and the tool helps turn it into numbers: 
 
 **Quick start:** install [Python 3.11+](https://www.python.org/downloads/), download this repository, then double-click **`run.bat`** on Windows (or run `./run.sh` on macOS / Linux). The full steps are in [Getting Started](#getting-started).
 
+**Use ImageJ or Fiji?** The Binary / Circle Crop tool is also available as an ImageJ / Fiji plugin: drop one `.jar` file into ImageJ's `plugins` folder. See [ImageJ / Fiji Plugin](#imagej--fiji-plugin).
+
 ---
 
 ## What It Does
@@ -130,7 +132,11 @@ Foam-measuring-tool/
 │   ├── vision/              ← preprocessing, segmentation, calibration, measurements
 │   ├── reporting/           ← CSV / Excel export (planned)
 │   └── database/            ← project storage (planned)
-└── tests/                   ← automated tests
+├── tests/                   ← automated tests
+└── imagej-plugin/           ← the same tool as an ImageJ / Fiji plugin
+    ├── Foam_Binary_Ring.jar ← drop this into ImageJ's plugins folder
+    ├── src/                 ← plugin source (Java)
+    └── test/                ← plugin tests
 ```
 
 ---
@@ -238,6 +244,23 @@ processing.save_image("foam_ring.png", processing.crop_to_mask(binary, ring))
 ```
 
 `open_dialog` needs a running Qt application. Inside the main app, one already exists.
+
+---
+
+## ImageJ / Fiji Plugin
+
+The Binary / Circle Crop tool is also available as a plugin for **ImageJ** and **Fiji**. It doesn't need Python or the rest of this app.
+
+**Install:** download [`imagej-plugin/Foam_Binary_Ring.jar`](imagej-plugin/Foam_Binary_Ring.jar), copy it into ImageJ's `plugins` folder (`Fiji.app/plugins/` for Fiji), and restart. Run it from **Plugins ▸ Foam Tools ▸ Foam Binary / Ring...**
+
+It has the same controls: threshold slider, Target black %, Auto (Otsu), invert, and circle / ring / add / overlap shapes. It also uses ImageJ's own features:
+
+- Draw circles with the **Oval tool**, then click a button to use the selection as circle 1 or circle 2.
+- Results are given in **µm** when the image has a scale (**Analyze ▸ Set Scale...**).
+- Measurements go into the **Results** table, and the shape can be added to the **ROI Manager**.
+- It's **macro recordable**, for batch processing.
+
+Full instructions are in [`imagej-plugin/README.md`](imagej-plugin/README.md).
 
 ---
 
