@@ -1,4 +1,4 @@
-# Foam Measuring Tool
+# Circles and Binary
 
 An offline desktop application for measuring foam cell structures from microscope images.
 
