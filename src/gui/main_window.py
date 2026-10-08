@@ -1,5 +1,6 @@
 import sys
 import cv2
+import numpy as np
 
 from PySide6.QtGui import QPixmap
 from PySide6.QtCore import Qt
@@ -219,7 +220,10 @@ class MainWindow(QWidget):
         # Load original image with OpenCV
         #
 
-        image = cv2.imread(filename)
+        image = cv2.imdecode(
+            np.fromfile(filename, dtype=np.uint8),
+            cv2.IMREAD_COLOR
+        )
         self.original_image = image
 
         if image is None:
