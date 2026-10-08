@@ -19,7 +19,13 @@ You load a microscope picture of foam, and the tool helps turn it into numbers: 
   - **Control the amount of black vs. white** with a threshold slider, by typing a target black percentage, or with an automatic setting.
   - **Live readout** of the percentage of the image that is black and white.
   - **Crop to a circle**: draw a circle on the image to keep only that region. This is useful for round microscope fields of view.
-  - **Save the result** at full resolution. It can be saved with a transparent background outside the circle.
+  - **Second circle for rings and more complex shapes**: add a second circle and combine it with the first:
+    - **Ring**: cut circle 2 out of circle 1. A concentric circle 2 gives a ring, and an off-center one gives a crescent.
+    - **Add**: join the two circles together.
+    - **Overlap**: keep only the area both circles cover, a lens shape.
+
+    The tool shows the shape's area, and for rings the ring width and how far off-center the circles are.
+  - **Save the result** at full resolution. It can be saved with a transparent background outside the circle or shape.
 
 ### Planned
 
@@ -51,13 +57,20 @@ The image is read with OpenCV (`cv2.imread`) and kept at full resolution in memo
    - **Auto (Otsu)**: [Otsu's method](https://en.wikipedia.org/wiki/Otsu%27s_method) looks at the histogram and picks the threshold that best separates the image into two groups, dark and light. This usually gives a good split between cell walls and background with no manual tuning.
 4. **Invert** swaps black and white, for images where the cell walls are lighter than the background.
 
-The black/white percentages shown in the window are counts of black and white pixels. When a crop circle is active, only the pixels inside the circle are counted.
+The black/white percentages shown in the window are counts of black and white pixels. When a crop circle or two-circle shape is active, only the pixels inside it are counted. The **Target black %** and **Auto** settings also look only at those pixels.
 
 ### 3. Circle crop
 
 - You draw the circle with the mouse: press where you want the center and drag outward to set the radius. Drag inside the circle to move it, and use the mouse wheel or the Radius box to resize it.
 - The circle is stored in full-resolution image coordinates, so the saved file is exact even though you drew on a scaled-down preview.
-- When saving, the image is cut to the square around the circle. Pixels outside the circle are then either made **transparent** (PNG/TIFF) or filled **white** (JPEG/BMP, which can't store transparency).
+- **Second circle:** each circle is turned into a mask, a yes/no map of which pixels it covers, and the two masks are combined:
+  - Ring = inside circle 1 **and not** inside circle 2
+  - Add = inside circle 1 **or** inside circle 2
+  - Overlap = inside circle 1 **and** inside circle 2
+
+  The area is the number of pixels in the combined mask. Ring width is circle 1's radius minus circle 2's radius, and center offset is the distance between the two centers.
+- The preview shows circle 1 in red and circle 2 in blue. The circle you're editing has the thicker outline, and mouse actions and the Radius box apply to it.
+- When saving, the image is cut to the box around the selected shape. Pixels outside the circle are then either made **transparent** (PNG/TIFF) or filled **white** (JPEG/BMP, which can't store transparency).
 - Files are written with `cv2.imencode`, so saving works in folders with non-English characters in the path, such as OneDrive folders on Windows.
 
 ### 4. Measuring cells (planned)
@@ -79,6 +92,9 @@ The intended pipeline, with early pieces already in `src/vision/`:
 3. Click **Binary / Circle Crop**.
 4. Adjust the black/white amount using the slider, **Target black %** with **Apply**, or **Auto (Otsu)**.
 5. Optionally tick **Crop to circle** and draw a circle on the image.
+   - For a ring or other two-circle shape, also tick **Add a second circle**. It starts as a ring half the size of circle 1.
+   - Pick how the circles combine (Ring, Add or Overlap). Use **Edit: Circle 1 / Circle 2** to choose which circle the mouse moves and resizes.
+   - **Center Circle 2 on Circle 1** lines them up for a perfect ring.
 6. Click **Save Image...** to save the result.
 
 ---
@@ -109,7 +125,7 @@ Foam-measuring-tool/
 │   │   └── image_viewer.py  ← image display (mouse wheel to zoom)
 │   ├── plugins/
 │   │   └── binary_image/    ← Binary / Circle Crop tool
-│   │       ├── processing.py  ← image math (threshold, Otsu, circle crop)
+│   │       ├── processing.py  ← image math (threshold, Otsu, circle and ring shapes)
 │   │       └── dialog.py      ← the tool's window and circle drawing
 │   ├── vision/              ← preprocessing, segmentation, calibration, measurements
 │   ├── reporting/           ← CSV / Excel export (planned)
@@ -214,6 +230,11 @@ threshold = processing.threshold_for_black_fraction(gray, 0.30)  # 30 % black
 binary = processing.binarize(gray, threshold)
 cropped = processing.crop_circle(binary, cx=500, cy=400, radius=300)
 processing.save_image("foam_binary.png", cropped)
+
+# Ring: outer circle minus inner circle, both as (cx, cy, radius)
+ring = processing.shape_mask(binary.shape, (500, 400, 300), (500, 400, 150), processing.SHAPE_RING)
+print("Black inside ring:", processing.black_fraction(binary, ring))
+processing.save_image("foam_ring.png", processing.crop_to_mask(binary, ring))
 ```
 
 `open_dialog` needs a running Qt application. Inside the main app, one already exists.
@@ -227,7 +248,7 @@ processing.save_image("foam_binary.png", cropped)
 - [x] Project structure
 - [x] GUI window
 - [x] Image loading
-- [x] Binary conversion and circle crop tool
+- [x] Binary conversion and circle / ring crop tool
 - [ ] Manual calibration
 - [ ] Basic segmentation
 

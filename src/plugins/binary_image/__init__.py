@@ -2,7 +2,8 @@
 Binary image plugin.
 
 Converts a picture to black and white, lets the user control how much
-of the image is black vs. white, and crops the image to a circle.
+of the image is black vs. white, and crops the image to a circle, or to
+a ring or other shape made from two circles.
 """
 
 from .processing import (
@@ -13,6 +14,13 @@ from .processing import (
     black_fraction,
     circle_mask,
     crop_circle,
+    crop_to_mask,
+    shape_mask,
+    ring_geometry,
+    SHAPE_SINGLE,
+    SHAPE_RING,
+    SHAPE_UNION,
+    SHAPE_INTERSECT,
 )
 
 

@@ -74,3 +74,55 @@ def test_save_image_roundtrip(tmp_path):
 
     loaded = cv2.imread(str(path), cv2.IMREAD_UNCHANGED)
     assert loaded.shape == image.shape
+
+
+def test_ring_mask_area_and_crop():
+    shape = (200, 200)
+    outer, inner = (100, 100, 80), (100, 100, 40)
+
+    ring = processing.shape_mask(shape, outer, inner, processing.SHAPE_RING)
+
+    assert ring.sum() == pytest.approx(np.pi * (80 ** 2 - 40 ** 2), rel=0.02)
+    assert not ring[100, 100]   # hole in the middle
+    assert ring[100, 30]        # inside the band
+
+    cropped = processing.crop_to_mask(np.zeros(shape, np.uint8), ring)
+    assert cropped.shape == (161, 161, 4)
+    assert cropped[80, 80, 3] == 0      # centre hole is transparent
+    assert cropped[80, 10, 3] == 255    # band is opaque
+
+
+def test_union_and_intersect_masks():
+    shape = (100, 200)
+    a, b = (70, 50, 40), (130, 50, 40)
+
+    single_a = processing.circle_mask(shape, *a)
+    single_b = processing.circle_mask(shape, *b)
+
+    union = processing.shape_mask(shape, a, b, processing.SHAPE_UNION)
+    lens = processing.shape_mask(shape, a, b, processing.SHAPE_INTERSECT)
+
+    assert (union == (single_a | single_b)).all()
+    assert (lens == (single_a & single_b)).all()
+    assert lens[50, 100] and not lens[50, 40]
+
+    # Without a second circle the shape is just circle 1
+    assert (processing.shape_mask(shape, a) == single_a).all()
+
+
+def test_ring_geometry():
+    geometry = processing.ring_geometry((10, 10, 50), (13, 14, 20))
+
+    assert geometry["width"] == 30
+    assert geometry["offset"] == pytest.approx(5)
+
+
+def test_black_fraction_only_counts_ring():
+    gray = np.full((200, 200), 255, np.uint8)
+    gray[90:110, 90:110] = 0   # black square inside the hole
+
+    ring = processing.shape_mask(gray.shape, (100, 100, 80), (100, 100, 40), processing.SHAPE_RING)
+    binary = processing.binarize(gray, 128)
+
+    assert processing.black_fraction(binary, ring) == 0.0
+    assert processing.black_fraction(binary) > 0

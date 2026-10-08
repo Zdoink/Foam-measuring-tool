@@ -101,6 +101,53 @@ def circle_mask(shape, cx, cy, radius):
     return (xs - cx) ** 2 + (ys - cy) ** 2 <= radius ** 2
 
 
+#
+# Two-circle shapes
+#
+
+SHAPE_SINGLE = "single"
+SHAPE_RING = "ring"            # circle 1 with circle 2 cut out
+SHAPE_UNION = "union"          # circle 1 plus circle 2
+SHAPE_INTERSECT = "intersect"  # only where circle 1 and circle 2 overlap
+
+
+def shape_mask(shape, circle1, circle2=None, mode=SHAPE_SINGLE):
+    """
+    Boolean mask for one circle, or two circles combined with `mode`.
+
+    Circles are (cx, cy, radius) tuples. With a concentric smaller second
+    circle, SHAPE_RING gives a ring; off-centre it gives a crescent, and
+    SHAPE_INTERSECT gives a lens.
+    """
+
+    mask = circle_mask(shape, *circle1)
+
+    if circle2 is None or mode == SHAPE_SINGLE:
+        return mask
+
+    second = circle_mask(shape, *circle2)
+
+    if mode == SHAPE_RING:
+        return mask & ~second
+    if mode == SHAPE_UNION:
+        return mask | second
+    if mode == SHAPE_INTERSECT:
+        return mask & second
+
+    raise ValueError(f"Unknown shape mode: {mode}")
+
+
+def ring_geometry(circle1, circle2):
+    """Width (outer minus inner radius) and centre offset of two circles."""
+
+    (x1, y1, r1), (x2, y2, r2) = circle1, circle2
+
+    return {
+        "width": abs(r1 - r2),
+        "offset": float(np.hypot(x2 - x1, y2 - y1)),
+    }
+
+
 def crop_circle(image, cx, cy, radius, transparent=True, fill=255):
     """
     Crop `image` to the square around a circle and blank out the corners.
@@ -110,19 +157,30 @@ def crop_circle(image, cx, cy, radius, transparent=True, fill=255):
     the outside painted with `fill`.
     """
 
-    height, width = image.shape[:2]
+    return crop_to_mask(
+        image,
+        circle_mask(image.shape, cx, cy, radius),
+        transparent,
+        fill,
+    )
 
-    x0 = max(int(np.floor(cx - radius)), 0)
-    y0 = max(int(np.floor(cy - radius)), 0)
-    x1 = min(int(np.ceil(cx + radius)) + 1, width)
-    y1 = min(int(np.ceil(cy + radius)) + 1, height)
 
-    if x1 <= x0 or y1 <= y0:
-        raise ValueError("Circle does not overlap the image.")
+def crop_to_mask(image, mask, transparent=True, fill=255):
+    """
+    Crop `image` to the bounding box of `mask` and blank out everything
+    outside it (transparent, or painted with `fill`).
+    """
+
+    ys, xs = np.nonzero(mask)
+
+    if ys.size == 0:
+        raise ValueError("The selected shape does not overlap the image.")
+
+    y0, y1 = ys.min(), ys.max() + 1
+    x0, x1 = xs.min(), xs.max() + 1
 
     cropped = image[y0:y1, x0:x1].copy()
-
-    mask = circle_mask(cropped.shape, cx - x0, cy - y0, radius)
+    mask = mask[y0:y1, x0:x1]
 
     if transparent:
         if cropped.ndim == 2:
