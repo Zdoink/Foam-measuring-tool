@@ -141,6 +141,84 @@ pip install -r requirements.txt
 
 ---
 
+## Installing the Binary / Circle Crop Plugin
+
+### New install
+
+The plugin is already included. Clone the repository and follow [Installation](#installation) above. The **Binary / Circle Crop** button appears in the toolbar when you start the app, and no extra packages are needed.
+
+### Adding it to an existing copy of the app
+
+If your copy of the app is older and doesn't have the **Binary / Circle Crop** button yet, use one of these options.
+
+**Option A: update with git** (if you cloned the repository)
+
+```powershell
+cd Foam-measuring-tool
+git pull
+```
+
+**Option B: copy the files by hand** (from a download or zip of this repository)
+
+Copy these into your `Foam-measuring-tool-main` folder (the one with `main.py`), keeping the same folder structure:
+
+| File / folder                    | What it is                                                        |
+| -------------------------------- | ----------------------------------------------------------------- |
+| `src/plugins/`                   | The plugin itself (new folder)                                    |
+| `src/gui/main_window.py`         | Replaces your copy; adds the **Binary / Circle Crop** toolbar button |
+| `tests/test_binary_image.py`     | The plugin's automated tests (optional)                           |
+
+> If you have made your own changes to `main_window.py`, don't replace the file. Instead, add these four small edits to your copy:
+>
+> 1. Add the import near the top: `from ..plugins import binary_image`
+> 2. In `__init__`, add `self.original_image = None`
+> 3. In `build_ui`, add a `QPushButton("Binary / Circle Crop")` to the toolbar and connect it with `self.binary_button.clicked.connect(self.open_binary_tool)`
+> 4. Add this method to the `MainWindow` class:
+>
+>    ```python
+>    def open_binary_tool(self):
+>        if self.original_image is None:
+>            self.footer.setText("Open an image first.")
+>            return
+>        binary_image.open_dialog(self.original_image, self)
+>    ```
+
+### Check that it works
+
+From the `Foam-measuring-tool-main` folder:
+
+```powershell
+python -m pytest tests
+python main.py
+```
+
+The tests should all pass. In the app, click **Open Image**, then **Binary / Circle Crop**, and the tool's window should open.
+
+### Using the plugin from your own code
+
+The plugin can also be used without the main window:
+
+```python
+import cv2
+from src.plugins.binary_image import processing, open_dialog
+
+image = cv2.imread("foam.png")
+
+# Interactive window
+open_dialog(image)
+
+# Or call the image functions directly
+gray = processing.to_gray(image)
+threshold = processing.threshold_for_black_fraction(gray, 0.30)  # 30 % black
+binary = processing.binarize(gray, threshold)
+cropped = processing.crop_circle(binary, cx=500, cy=400, radius=300)
+processing.save_image("foam_binary.png", cropped)
+```
+
+`open_dialog` needs a running Qt application. Inside the main app, one already exists.
+
+---
+
 ## Running the Application
 
 From the `Foam-measuring-tool-main` folder:
