@@ -6,6 +6,8 @@ You load a microscope picture of foam, and the tool helps turn it into numbers: 
 
 > **Status:** early development. Image loading and the Binary / Circle Crop tool work today. Calibration, cell detection and export are planned and are shown in the window as buttons that don't do anything yet. See the [roadmap](#development-roadmap).
 
+**Quick start:** install [Python 3.11+](https://www.python.org/downloads/), download this repository, then double-click **`run.bat`** on Windows (or run `./run.sh` on macOS / Linux). The full steps are in [Getting Started](#getting-started).
+
 ---
 
 ## What It Does
@@ -72,7 +74,7 @@ The intended pipeline, with early pieces already in `src/vision/`:
 
 ## Using the App
 
-1. Start the app (see [Running the Application](#running-the-application)).
+1. Start the app (see [Getting Started](#getting-started)).
 2. Click **Open Image** and choose a microscope picture.
 3. Click **Binary / Circle Crop**.
 4. Adjust the black/white amount using the slider, **Target black %** with **Apply**, or **Auto (Otsu)**.
@@ -97,106 +99,105 @@ The intended pipeline, with early pieces already in `src/vision/`:
 
 ```text
 Foam-measuring-tool/
-├── README.md
-└── Foam-measuring-tool-main/        ← the application lives here
-    ├── main.py                      ← start the app with this
-    ├── requirements.txt
-    ├── src/
-    │   ├── gui/
-    │   │   ├── main_window.py       ← main window and toolbar
-    │   │   └── image_viewer.py      ← image display
-    │   ├── plugins/
-    │   │   └── binary_image/        ← Binary / Circle Crop tool
-    │   │       ├── processing.py    ← image math (threshold, Otsu, circle crop)
-    │   │       └── dialog.py        ← the tool's window and circle drawing
-    │   ├── vision/                  ← preprocessing, segmentation, calibration, measurements
-    │   ├── reporting/               ← CSV / Excel export (planned)
-    │   └── database/                ← project storage (planned)
-    └── tests/                       ← automated tests
+├── run.bat                  ← Windows: double-click to start the app
+├── run.sh                   ← macOS / Linux: run to start the app
+├── main.py                  ← the app's entry point
+├── requirements.txt         ← Python packages the app needs
+├── src/
+│   ├── gui/
+│   │   ├── main_window.py   ← main window and toolbar
+│   │   └── image_viewer.py  ← image display (mouse wheel to zoom)
+│   ├── plugins/
+│   │   └── binary_image/    ← Binary / Circle Crop tool
+│   │       ├── processing.py  ← image math (threshold, Otsu, circle crop)
+│   │       └── dialog.py      ← the tool's window and circle drawing
+│   ├── vision/              ← preprocessing, segmentation, calibration, measurements
+│   ├── reporting/           ← CSV / Excel export (planned)
+│   └── database/            ← project storage (planned)
+└── tests/                   ← automated tests
 ```
 
 ---
 
-## Installation
+## Getting Started
 
-Clone the repository:
+### 1. Install Python (one time)
 
-```powershell
-git clone https://github.com/Zdoink/Foam-measuring-tool.git
-cd Foam-measuring-tool\Foam-measuring-tool-main
-```
+You need **Python 3.11 or newer**.
 
-Create and activate a virtual environment:
+- **Windows:** download it from [python.org/downloads](https://www.python.org/downloads/). During installation, **tick "Add python.exe to PATH"**.
+- **macOS:** download it from [python.org/downloads](https://www.python.org/downloads/), or run `brew install python`.
+- **Linux:** use your package manager, e.g. `sudo apt install python3 python3-venv`.
+
+### 2. Download the app
+
+Either:
+
+- **Without git:** on the GitHub page, click the green **Code** button → **Download ZIP**, then unzip it anywhere, or
+- **With git:**
+
+  ```powershell
+  git clone https://github.com/Zdoink/Foam-measuring-tool.git
+  ```
+
+### 3. Start the app
+
+- **Windows:** open the folder and **double-click `run.bat`**.
+- **macOS / Linux:** open a terminal in the folder and run:
+
+  ```bash
+  ./run.sh
+  ```
+
+The **first start takes a few minutes**: the launcher creates a private Python environment in a `.venv` folder and downloads the required packages (about 800 MB). After that, the app opens straight away.
+
+> To redo the setup (for example after `requirements.txt` changes), delete the `.venv` folder and start the launcher again.
+
+### Manual setup (alternative)
+
+If you prefer to set things up yourself, run these commands in the project folder:
 
 ```powershell
 python -m venv .venv
-.venv\Scripts\activate
+.venv\Scripts\activate          # Windows
+# source .venv/bin/activate      # macOS / Linux
+pip install -r requirements.txt
+python main.py
 ```
 
-Install dependencies:
+### Troubleshooting
+
+| Problem | Fix |
+| ------- | --- |
+| `run.bat` says Python was not found | Install Python as in step 1, making sure "Add python.exe to PATH" is ticked, then try again. |
+| Package installation fails | Check your internet connection, delete the `.venv` folder and start the launcher again. |
+| Linux: error about `libEGL`, `libGL` or `xcb` | Install Qt's system libraries: `sudo apt install libegl1 libgl1 libxkbcommon0 libxcb-cursor0` |
+| macOS: `permission denied` for `./run.sh` | Run `chmod +x run.sh` once. |
+
+---
+
+## Running the Tests
+
+In the project folder, with the environment set up:
 
 ```powershell
-pip install -r requirements.txt
+.venv\Scripts\python -m pytest tests     # Windows
+.venv/bin/python -m pytest tests          # macOS / Linux
 ```
 
 ---
 
-## Installing the Binary / Circle Crop Plugin
+## The Binary / Circle Crop Plugin
 
-### New install
+### Installing it
 
-The plugin is already included. Clone the repository and follow [Installation](#installation) above. The **Binary / Circle Crop** button appears in the toolbar when you start the app, and no extra packages are needed.
+The plugin is **built in**: if you downloaded the app as described in [Getting Started](#getting-started), you already have it. The **Binary / Circle Crop** button is in the toolbar, and no extra packages are needed.
 
-### Adding it to an existing copy of the app
-
-If your copy of the app is older and doesn't have the **Binary / Circle Crop** button yet, use one of these options.
-
-**Option A: update with git** (if you cloned the repository)
-
-```powershell
-cd Foam-measuring-tool
-git pull
-```
-
-**Option B: copy the files by hand** (from a download or zip of this repository)
-
-Copy these into your `Foam-measuring-tool-main` folder (the one with `main.py`), keeping the same folder structure:
-
-| File / folder                    | What it is                                                        |
-| -------------------------------- | ----------------------------------------------------------------- |
-| `src/plugins/`                   | The plugin itself (new folder)                                    |
-| `src/gui/main_window.py`         | Replaces your copy; adds the **Binary / Circle Crop** toolbar button |
-| `tests/test_binary_image.py`     | The plugin's automated tests (optional)                           |
-
-> If you have made your own changes to `main_window.py`, don't replace the file. Instead, add these four small edits to your copy:
->
-> 1. Add the import near the top: `from ..plugins import binary_image`
-> 2. In `__init__`, add `self.original_image = None`
-> 3. In `build_ui`, add a `QPushButton("Binary / Circle Crop")` to the toolbar and connect it with `self.binary_button.clicked.connect(self.open_binary_tool)`
-> 4. Add this method to the `MainWindow` class:
->
->    ```python
->    def open_binary_tool(self):
->        if self.original_image is None:
->            self.footer.setText("Open an image first.")
->            return
->        binary_image.open_dialog(self.original_image, self)
->    ```
-
-### Check that it works
-
-From the `Foam-measuring-tool-main` folder:
-
-```powershell
-python -m pytest tests
-python main.py
-```
-
-The tests should all pass. In the app, click **Open Image**, then **Binary / Circle Crop**, and the tool's window should open.
+If you have an **older copy** of the app (one with a `Foam-measuring-tool-main` subfolder), the project layout has changed since then. The simplest fix is to download the app again, or run `git pull` if you cloned it.
 
 ### Using the plugin from your own code
 
-The plugin can also be used without the main window:
+The plugin can also be used without the main window. Run this from the project folder:
 
 ```python
 import cv2
@@ -216,24 +217,6 @@ processing.save_image("foam_binary.png", cropped)
 ```
 
 `open_dialog` needs a running Qt application. Inside the main app, one already exists.
-
----
-
-## Running the Application
-
-From the `Foam-measuring-tool-main` folder:
-
-```powershell
-python main.py
-```
-
-## Running the Tests
-
-From the `Foam-measuring-tool-main` folder:
-
-```powershell
-python -m pytest tests
-```
 
 ---
 

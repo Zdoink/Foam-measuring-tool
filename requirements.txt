@@ -3,7 +3,7 @@ numpy
 pandas
 scipy
 scikit-image
-PySide6
+PySide6-Essentials
 openpyxl
 reportlab
 pytest
