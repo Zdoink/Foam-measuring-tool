@@ -1,14 +1,25 @@
 # Circles and Binary
 
-An offline desktop application for measuring foam cell structures from microscope images.
+Tools for measuring foam cell structures in microscope images. They turn a picture into black and white, let you control how much of it is black vs. white, and measure inside a **circle**, a **ring**, or other shapes made from two circles.
 
-You load a microscope picture of foam, and the tool helps turn it into numbers: how many cells there are, how big they are and how round they are. Everything runs locally on your computer, so no images are uploaded anywhere.
+It comes in two forms. Both have the same Binary / Circle Crop tool:
 
-> **Status:** early development. Image loading and the Binary / Circle Crop tool work today. Calibration, cell detection and export are planned and are shown in the window as buttons that don't do anything yet. See the [roadmap](#development-roadmap).
+| | **Desktop app** (Python) | **ImageJ / Fiji plugin** (Java) |
+| --- | --- | --- |
+| Install | Download the repo, double-click `run.bat` | Copy one `.jar` file into ImageJ's `plugins` folder |
+| Needs | Python 3.11+ | ImageJ (tested with 1.54p) or Fiji |
+| Results in µm | Not yet (pixels) | Yes, using ImageJ's scale |
+| Results table, ROI Manager, macros | No | Yes |
+| Save cropped image | PNG with transparent background | ImageJ image (white outside the shape) |
+| Cell detection and reports | Planned | Use ImageJ's own tools |
 
-**Quick start:** install [Python 3.11+](https://www.python.org/downloads/), download this repository, then double-click **`run.bat`** on Windows (or run `./run.sh` on macOS / Linux). The full steps are in [Getting Started](#getting-started).
+Everything runs locally on your computer, so no images are uploaded anywhere.
 
-**Use ImageJ or Fiji?** The Binary / Circle Crop tool is also available as an ImageJ / Fiji plugin: drop one `.jar` file into ImageJ's `plugins` folder. See [ImageJ / Fiji Plugin](#imagej--fiji-plugin).
+> **Status:** early development. Image loading and the Binary / Circle Crop tool work in both the app and the ImageJ plugin. In the desktop app, calibration, cell detection and export are planned; they appear in the window as buttons that don't do anything yet. See the [roadmap](#development-roadmap).
+
+**Quick start (desktop app):** install [Python 3.11+](https://www.python.org/downloads/), download this repository, then double-click **`run.bat`** on Windows (or run `./run.sh` on macOS / Linux). The full steps are in [Getting Started](#getting-started).
+
+**Quick start (ImageJ / Fiji):** copy [`imagej-plugin/Foam_Binary_Ring.jar`](imagej-plugin/Foam_Binary_Ring.jar) into ImageJ's `plugins` folder, restart, and run **Plugins ▸ Foam Tools ▸ Foam Binary / Ring...**. See [ImageJ / Fiji Plugin](#imagej--fiji-plugin).
 
 ---
 
@@ -28,10 +39,11 @@ You load a microscope picture of foam, and the tool helps turn it into numbers: 
 
     The tool shows the shape's area, and for rings the ring width and how far off-center the circles are.
   - **Save the result** at full resolution. It can be saved with a transparent background outside the circle or shape.
+- **ImageJ / Fiji plugin** with the same tool, plus results in µm, the Results table, the ROI Manager and macro recording. See [ImageJ / Fiji Plugin](#imagej--fiji-plugin).
 
 ### Planned
 
-- Manual calibration of the image scale (µm per pixel) using a scale bar
+- Manual calibration of the image scale (µm per pixel) using a scale bar. The ImageJ plugin can already use ImageJ's **Set Scale**.
 - Automatic foam cell detection (segmentation)
 - Measurement of each cell: area, perimeter, equivalent diameter and circularity, plus cell count and summary statistics
 - CSV, Excel and PDF reports
@@ -43,7 +55,7 @@ You load a microscope picture of foam, and the tool helps turn it into numbers: 
 
 ### 1. Loading an image
 
-The image is read with OpenCV (`cv2.imread`) and kept at full resolution in memory. For display, a smaller preview is made (at most 1000 px on its longest side), so even huge microscope images stay responsive on screen.
+The image is read with OpenCV (`np.fromfile` + `cv2.imdecode`, which also works for file paths with non-English characters on Windows) and kept at full resolution in memory. For display, a smaller preview is made (at most 1000 px on its longest side), so even huge microscope images stay responsive on screen.
 
 ### 2. Converting to black and white (binarization)
 
@@ -72,10 +84,20 @@ The black/white percentages shown in the window are counts of black and white pi
 
   The area is the number of pixels in the combined mask. Ring width is circle 1's radius minus circle 2's radius, and center offset is the distance between the two centers.
 - The preview shows circle 1 in red and circle 2 in blue. The circle you're editing has the thicker outline, and mouse actions and the Radius box apply to it.
-- When saving, the image is cut to the box around the selected shape. Pixels outside the circle are then either made **transparent** (PNG/TIFF) or filled **white** (JPEG/BMP, which can't store transparency).
+- When saving, the image is cut to the box around the selected shape. Pixels outside the shape, including a ring's hole, are then either made **transparent** (PNG/TIFF) or filled **white** (JPEG/BMP, which can't store transparency).
 - Files are written with `cv2.imencode`, so saving works in folders with non-English characters in the path, such as OneDrive folders on Windows.
 
-### 4. Measuring cells (planned)
+### 4. The ImageJ / Fiji plugin
+
+The plugin uses the same math, written in Java against ImageJ's own classes:
+
+- The image is converted to 8-bit gray with ImageJ's `convertToByteProcessor`. For stacks, the current slice is used.
+- The live preview changes only the image's **lookup table**, the mapping from gray values to screen colors. No pixels are rewritten, so moving the slider stays instant even on very large images. Pixels are thresholded for real only when you click **Apply**.
+- Shapes are built from exact ellipses, combined with Java's `Area` (subtract for Ring, add for Add, intersect for Overlap), and turned into an ImageJ selection (`ShapeRoi`).
+- The black/white percentages, Target black % and Otsu all use the histogram of the pixels inside that selection, computed by ImageJ.
+- Calibrated values come from the image's scale: area × pixel width × pixel height, and lengths × pixel width.
+
+### 5. Measuring cells (planned)
 
 The intended pipeline, with early pieces already in `src/vision/`:
 
@@ -110,13 +132,14 @@ The intended pipeline, with early pieces already in `src/vision/`:
 | Desktop GUI     | PySide6 (Qt)                  |
 | Reporting       | Pandas, OpenPyXL, ReportLab   |
 | Testing         | PyTest                        |
+| ImageJ plugin   | Java 8+, ImageJ 1.x API (works in ImageJ and Fiji) |
 
 ---
 
 ## Project Structure
 
 ```text
-Foam-measuring-tool/
+ImageJ_CirclesFMT/
 ├── run.bat                  ← Windows: double-click to start the app
 ├── run.sh                   ← macOS / Linux: run to start the app
 ├── main.py                  ← the app's entry point
@@ -135,7 +158,9 @@ Foam-measuring-tool/
 ├── tests/                   ← automated tests
 └── imagej-plugin/           ← the same tool as an ImageJ / Fiji plugin
     ├── Foam_Binary_Ring.jar ← drop this into ImageJ's plugins folder
-    ├── src/                 ← plugin source (Java)
+    ├── README.md            ← plugin instructions
+    ├── build.sh             ← rebuilds the .jar from source
+    ├── src/                 ← plugin source (Java) and menu entry
     └── test/                ← plugin tests
 ```
 
@@ -159,7 +184,7 @@ Either:
 - **With git:**
 
   ```powershell
-  git clone https://github.com/Zdoink/Foam-measuring-tool.git
+  git clone https://github.com/Zdoink/ImageJ_CirclesFMT.git
   ```
 
 ### 3. Start the app
@@ -207,9 +232,11 @@ In the project folder, with the environment set up:
 .venv/bin/python -m pytest tests          # macOS / Linux
 ```
 
+The ImageJ plugin has its own tests, which need a Java JDK and ImageJ's `ij.jar`. See [`imagej-plugin/README.md`](imagej-plugin/README.md#building-from-source).
+
 ---
 
-## The Binary / Circle Crop Plugin
+## The Binary / Circle Crop Plugin (desktop app)
 
 ### Installing it
 
@@ -260,7 +287,17 @@ It has the same controls: threshold slider, Target black %, Auto (Otsu), invert,
 - Measurements go into the **Results** table, and the shape can be added to the **ROI Manager**.
 - It's **macro recordable**, for batch processing.
 
-Full instructions are in [`imagej-plugin/README.md`](imagej-plugin/README.md).
+**Making a ring:** draw an oval around the outside edge on the preview and click **Circle 1 = current oval selection**. Then draw one around the hole and click **Circle 2 = current oval selection**, which switches the shape to Ring automatically.
+
+**Batch processing:** turn on **Plugins ▸ Macros ▸ Record...** and run the plugin once to get a command you can reuse in a macro, for example:
+
+```javascript
+run("Foam Binary / Ring...", "threshold=128 auto_threshold shape=[Ring (circle 1 minus circle 2)] circle_1_x=690 circle_1_y=535 circle_1_radius=447 circle_2_x=720 circle_2_y=555 circle_2_radius=208 add_to_results create_cropped");
+```
+
+**Not in the Plugins menu?** Check that the file is named exactly `Foam_Binary_Ring.jar` (ImageJ needs the underscore), that it is directly in the `plugins` folder rather than a subfolder, and that you restarted ImageJ.
+
+Tested with ImageJ 1.54p. Full instructions, including the Results table columns, are in [`imagej-plugin/README.md`](imagej-plugin/README.md).
 
 ---
 
@@ -272,6 +309,7 @@ Full instructions are in [`imagej-plugin/README.md`](imagej-plugin/README.md).
 - [x] GUI window
 - [x] Image loading
 - [x] Binary conversion and circle / ring crop tool
+- [x] ImageJ / Fiji plugin version of the tool
 - [ ] Manual calibration
 - [ ] Basic segmentation
 
