@@ -63,6 +63,16 @@ Leave out a checkbox keyword to turn that option off (e.g. remove `create_croppe
 | Ring width | Radius 1 minus radius 2 (Ring only) |
 | Center offset | Distance between the two circle centers |
 
+## Troubleshooting
+
+| Problem | Fix |
+| ------- | --- |
+| Not in the Plugins menu | The file must be named `Foam_Binary_Ring.jar` (with the underscore), sit directly in the `plugins` folder (not a subfolder), and ImageJ must be restarted. |
+| "There are no images open" | Open an image first; the plugin works on the active image. |
+| Results are in pixels, not µm | Set the scale first with **Analyze ▸ Set Scale...** (or use an image that already has one). |
+| "The selected shape does not overlap the image" | A circle is outside the image. Check the X / Y / radius values or redraw the oval. |
+| The slider doesn't seem to change anything | While **Auto** or **Use target black %** is ticked, those set the threshold. Moving the slider switches them off automatically. |
+
 ## Building from source
 
 You only need this to change the plugin. With a JDK installed:
